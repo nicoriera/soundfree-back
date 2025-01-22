@@ -2,23 +2,38 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const downloadRoutes = require("./routes/download");
+const playlistRoutes = require("./routes/playlist");
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Ajoutez une variable pour l'URL autorisée en CORS
-const allowedOrigin = process.env.ALLOWED_ORIGIN || "http://localhost:3000";
+// Configuration des origines autorisées
+const allowedOrigins = [
+  "http://localhost:5173", // Frontend en développement
+  "https://sound-free.netlify.app", // Frontend en production
+];
 
-// Middleware
+// Middleware CORS
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: function (origin, callback) {
+      // Permettre les requêtes sans origine (comme les appels API directs)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Non autorisé par CORS"));
+      }
+    },
+    credentials: true, // Si vous utilisez des cookies ou l'authentification
   })
 );
 app.use(express.json());
 
 // Routes
-app.use("/api", downloadRoutes);
+app.use("/api/track", downloadRoutes);
+app.use("/api/playlist", playlistRoutes);
 
 // Test route
 app.get("/", (req, res) => {
@@ -35,3 +50,5 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
+module.exports = app;

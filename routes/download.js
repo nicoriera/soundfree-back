@@ -2,6 +2,7 @@ const express = require("express");
 const scdl = require("soundcloud-downloader").default;
 const ytdl = require("ytdl-core");
 const router = express.Router();
+const CLIENT_ID = process.env.SOUNDCLOUD_CLIENT_ID;
 
 // Configuration de la clé client SoundCloud
 const getClientId = async () => {
@@ -25,6 +26,46 @@ const getClientId = async () => {
     console.error("Failed to initialize SoundCloud client ID:", error);
   }
 })();
+
+// Endpoint pour les informations d'une playlist
+router.post("/playlist-info", async (req, res) => {
+  try {
+    const { url } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ error: "URL manquante" });
+    }
+
+    // Vérifier si c'est bien une URL de playlist Soundcloud
+    if (!url.includes("soundcloud.com") || !url.includes("/sets/")) {
+      return res
+        .status(400)
+        .json({ error: "URL de playlist Soundcloud invalide" });
+    }
+
+    // Récupérer les informations de la playlist
+    const playlistInfo = await scdl.getSetInfo(url, CLIENT_ID);
+
+    // Formater la réponse
+    const response = {
+      playlistTitle: playlistInfo.title,
+      tracks: playlistInfo.tracks.map((track) => ({
+        title: track.title,
+        url: track.permalink_url,
+        duration: track.duration,
+        artist: track.user.username,
+      })),
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error("Erreur playlist-info:", error);
+    res.status(500).json({
+      error: "Erreur lors de la récupération des informations de la playlist",
+      details: error.message,
+    });
+  }
+});
 
 // Route pour obtenir les informations
 router.post("/info", async (req, res) => {
